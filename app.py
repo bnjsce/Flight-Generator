@@ -6,11 +6,12 @@ import threading
 import time
 import math
 import sys
+import re
 from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
 from backend import *
 
-TITLE = 'Flight Generator v2.1.1 | Ben Collingridge'
+TITLE = 'Flight Generator v2.1.2 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -92,6 +93,7 @@ class HomePage(tk.Frame):
 
 		self.departure_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/green_pin.png')))
 		self.arrival_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/red_pin.png')))
+		self.centre_dot_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/centre_dot.png')))
 
 		tk.Label(self, text='Flight Data', font=('Arial', 16)).pack(pady=(15, 5))
 		
@@ -130,6 +132,10 @@ class HomePage(tk.Frame):
 		self.map_widget.pack(fill='both', expand=True, padx=20, pady=20)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.1.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added simple stats page via the flight log page.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Distance and heading now shown at the centre point on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Timezone name and UTC offset now shown on departure and arrival pins on the map. For example: LHR = BST (UTC+1)', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.1.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Minor tweaks to map visuals.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.1.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -326,8 +332,8 @@ class HomePage(tk.Frame):
 		self.map_widget.update()
 		self.map_widget.update_idletasks()
 
-		centre_lat = (f.departure_coords[0] + f.arrival_coords[0]) / 2
-		centre_lon = (f.departure_coords[1] + f.arrival_coords[1]) / 2
+		self.centre_lat = (f.departure_coords[0] + f.arrival_coords[0]) / 2
+		self.centre_lon = (f.departure_coords[1] + f.arrival_coords[1]) / 2
 		
 		def calculate_zoom(dep, arr):
 			lat_span = abs(dep[0] - arr[0])
@@ -340,7 +346,7 @@ class HomePage(tk.Frame):
 			zoom = int(8 - math.log2(span))
 			return max(2, min(10, zoom)) + 1
 
-		self.map_widget.set_position(centre_lat, centre_lon)
+		self.map_widget.set_position(self.centre_lat, self.centre_lon)
 		zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
 		self.map_widget.set_zoom(zoom)
 
@@ -353,14 +359,14 @@ class HomePage(tk.Frame):
 		self.map_widget.set_marker(
 			f.departure_coords[0],
 			f.departure_coords[1],
-			text=f.departure_iata,
+			text=f'{f.departure_iata}\n{f.departure_timezone} ({f.departure_time_offset})',
 			icon=self.departure_icon
 		)
 
 		self.map_widget.set_marker(
 			f.arrival_coords[0],
 			f.arrival_coords[1],
-			text=f.arrival_iata,
+			text=f'{f.arrival_iata}\n{f.arrival_timezone} ({f.arrival_time_offset})',
 			icon=self.arrival_icon
 		)
 
@@ -368,6 +374,16 @@ class HomePage(tk.Frame):
 			[f.departure_coords, f.arrival_coords],
 			width=2,
 			color='dodgerblue'
+		)
+
+		heading = f.calc_heading(f.departure_coords, f.arrival_coords)
+		label = f'{f.distance} NM\nHDG {heading:03.0f}°'
+
+		self.map_widget.set_marker(
+			self.centre_lat,
+			self.centre_lon,
+			text=label,
+			icon=self.centre_dot_icon
 		)
 
 class BaseConfigEditor(tk.Frame):
@@ -649,8 +665,15 @@ class FlightLog(tk.Frame):
 			font=('Segoe UI', 10, 'bold')
 		)
 
+		self.notebook = ttk.Notebook(self)
+		self.notebook.pack(fill='both', expand=True, pady=10)
+		self.logbook_tab = tk.Frame(self.notebook)
+		self.stats_tab = tk.Frame(self.notebook)
+		self.notebook.add(self.logbook_tab, text='Logbook')
+		self.notebook.add(self.stats_tab, text='Stats')
+
 		# FILTERS
-		filter_frame = tk.Frame(self)
+		filter_frame = tk.Frame(self.logbook_tab)
 		filter_frame.pack(pady=10)
 
 		tk.Label(filter_frame, text='Departure').grid(row=0, column=0)
@@ -720,7 +743,7 @@ class FlightLog(tk.Frame):
 		)
 
 		self.tree = ttk.Treeview(
-			self,
+			self.logbook_tab,
 			columns=columns,
 			show='headings',
 			height=20
@@ -746,19 +769,38 @@ class FlightLog(tk.Frame):
 
 		# BUTTONS
 		tk.Button(
-			self,
+			self.logbook_tab,
 			text='Delete Selected',
 			command=self.delete_selected
 		).pack()
 
 		tk.Button(
-			self,
+			self.logbook_tab,
 			text='Back',
 			command=lambda: controller.show_frame('HomePage')
 		).pack(pady=10)
 
+		# STATS
+		self.l_total_flights = tk.StringVar(value='Total Flights: ')
+		self.l_total_distance = tk.StringVar(value='Total Distance Flown: NM')
+		self.l_total_time = tk.StringVar(value='Total Est. Flight Time:  h m')
+		self.l_average_flight_length = tk.StringVar(value='Average Flight Length: NM')
+		tk.Label(self.stats_tab, textvariable=self.l_total_flights, font=('Arial', 14)).pack(pady=20)
+		tk.Label(self.stats_tab, textvariable=self.l_total_distance, font=('Arial', 14)).pack(pady=20)
+		tk.Label(self.stats_tab, textvariable=self.l_total_time, font=('Arial', 14)).pack(pady=20)
+		tk.Label(self.stats_tab, textvariable=self.l_average_flight_length, font=('Arial', 14)).pack(pady=20)
+
+		tk.Button(self.stats_tab, text='Back', command=lambda: controller.show_frame('HomePage')).pack(pady=10, anchor='s', ipadx=10)
+
 	def load(self, controller):
 		self.log = get_flight_log()
+		self.flight_stats = self.compute_stats(self.log)
+
+		# update stats
+		self.l_total_flights.set(f"Total Flights: {self.flight_stats['total_flights']}")
+		self.l_total_distance.set(f"Total Distance Flown: {self.flight_stats['total_distance']} NM")
+		self.l_total_time.set(f"Total Est. Flight Time: {self.flight_stats['total_time']}")
+		self.l_average_flight_length.set(f"Average Flight Length: {round(self.flight_stats['average_flight_length'], 2)} NM")
 
 		self.dep_combo['values'] = [
 			'All',
@@ -781,6 +823,44 @@ class FlightLog(tk.Frame):
 		]
 
 		self.refresh_tree(self.log)
+
+	def compute_stats(self, flight_log):
+		def parse_block_time(block_time):
+			hours = 0
+			minutes = 0
+
+			h = re.search(r'(\d+)h', block_time)
+			m = re.search(r'(\d+)m', block_time)
+
+			if h:
+				hours = int(h.group(1))
+			if m:
+				minutes = int(m.group(1))
+
+			total_minutes = hours * 60 + minutes
+
+			return total_minutes
+
+		total_flights = len(flight_log)
+		total_distance = 0
+		total_time_minutes = 0
+
+		for flight in flight_log:
+			total_distance += flight.get('distance', 0)
+			total_time_minutes += parse_block_time(flight.get('block_time', '0m'))
+
+		total_time = f'{total_time_minutes // 60}h {total_time_minutes % 60}m'
+
+		avg_flight_length = (
+			total_distance / total_flights if total_flights > 0 else 0
+		)
+
+		return {
+			'total_flights': total_flights,
+			'total_distance': total_distance,
+			'total_time': total_time,
+			'average_flight_length': avg_flight_length
+		}
 
 	def refresh_tree(self, flights):
 		for row in self.tree.get_children():

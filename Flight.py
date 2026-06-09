@@ -9,6 +9,11 @@ class Flight:
 		'''
 		Initialise Flight object. All variables are public
 		'''
+		self.departure_timezone = rand_flight['airport']['origin']['timezone']['abbr']
+		self.departure_time_offset = f"UTC{int(rand_flight['airport']['origin']['timezone']['offset']) / 3600:+g}"
+		self.arrival_timezone = rand_flight['airport']['destination']['timezone']['abbr']
+		self.arrival_time_offset = f"UTC{int(rand_flight['airport']['destination']['timezone']['offset']) / 3600:+g}"
+
 		self.origin_details = f.get_airport_details(origin_iata)
 		# identification
 		self.callsign = rand_flight['identification']['callsign']
@@ -75,3 +80,16 @@ class Flight:
 		minutes = remainder // 60
 
 		return f'{hours}h {minutes}m'
+
+	@staticmethod
+	def calc_heading(dep, arr):
+		lat1, lon1 = map(math.radians, dep)
+		lat2, lon2 = map(math.radians, arr)
+
+		dlon = lon2 - lon1
+
+		x = math.sin(dlon) * math.cos(lat2)
+		y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
+
+		bearing = math.degrees(math.atan2(x, y))
+		return (bearing + 360) % 360
