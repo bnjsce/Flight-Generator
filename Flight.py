@@ -14,7 +14,7 @@ class Flight:
 		self.arrival_timezone = rand_flight['airport']['destination']['timezone']['abbr']
 		self.arrival_time_offset = f"UTC{int(rand_flight['airport']['destination']['timezone']['offset']) / 3600:+g}"
 
-		self.aircraft_iata = rand_flight['aircraft']['model']['code'] # eg A20N (A320 NEO)
+		self.aircraft_icao = rand_flight['aircraft']['model']['code'] # eg A20N (A320 NEO)
 
 		self.origin_details = f.get_airport_details(origin_iata)
 		# identification

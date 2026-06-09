@@ -98,6 +98,41 @@ def get_user_config(config_path) -> dict:
 	else:
 		return data
 
+def validate_airport(iata) -> bool:
+	if len(f.get_airport_details(iata, limit=1)) > 0:
+		return True
+	else:
+		return False
+
+def validate_airline(icao) -> bool:
+	if len(f.get_flights(icao)) > 0:
+		return True
+	else:
+		return False
+
+def validate_aircraft(icao) -> bool:
+	valid_aircraft = {
+		# Airbus
+		'A318', 'A319', 'A320', 'A20N', 'A321', 'A21N',
+		'A332', 'A333', 'A338', 'A339',
+		'A343', 'A346', 'A388',
+
+		# Boeing
+		'B733', 'B734', 'B735', 'B736', 'B737', 'B738', 'B739',
+		'B38M', 'B39M', 'B744', 'B748', 'B763',
+		'B772', 'B77L', 'B77W', 'B788', 'B789', 'B78X',
+
+		# Regional
+		'E170', 'E175', 'E190', 'E195',
+		'CRJ2', 'CRJ7', 'CRJ9', 'CRJX',
+
+		# Turboprops
+		'AT43', 'AT45', 'AT46', 'AT72', 'AT76',
+		'DH8D', 'DH8A'
+	}
+
+	return icao in valid_aircraft
+
 def get_random_flight(config_path) -> str or object:
 	'''
 	Randomly selects a flight based on user config data.
@@ -165,7 +200,7 @@ def add_flight_to_log(flight):
 	log.append({
 		"date": datetime.now().strftime("%d/%m/%Y"),
 		"aircraft": flight.aircraft_type,
-		"aircraft_iata": flight.aircraft_iata,
+		"aircraft_icao": flight.aircraft_icao,
 		"callsign": flight.callsign,
 		"departure": flight.departure_iata,
 		"arrival": flight.arrival_iata,

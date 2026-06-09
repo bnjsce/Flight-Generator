@@ -11,7 +11,7 @@ from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
 from backend import *
 
-TITLE = 'Flight Generator v2.1.2 | Ben Collingridge'
+TITLE = 'Flight Generator v2.1.3 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -117,12 +117,16 @@ class HomePage(tk.Frame):
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
 		self.notebook.pack(fill='both', expand=True, pady=10)
+		
 		self.details_tab = tk.Frame(self.notebook)
 		self.map_tab = tk.Frame(self.notebook)
 		self.patch_notes_tab = tk.Frame(self.notebook)
+		self.help_tab = tk.Frame(self.notebook)
+		
 		self.notebook.add(self.details_tab, text='Details')
 		self.notebook.add(self.map_tab, text='Map')
 		self.notebook.add(self.patch_notes_tab, text='Patch Notes')
+		self.notebook.add(self.help_tab, text='HELP')
 
 		self.map_widget = TkinterMapView(
 			self.map_tab,
@@ -132,6 +136,10 @@ class HomePage(tk.Frame):
 		self.map_widget.pack(fill='both', expand=True, padx=20, pady=20)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.1.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added airport and airline validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added a help tab on the home page. This outlines more information about validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.1.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added simple stats page via the flight log page.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Distance and heading now shown at the centre point on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -144,6 +152,47 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- This will update whenever you generate a new flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.0.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Brand new GUI.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+
+		# HELP PAGE
+		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.help_tab, text='- When entering an airport, you must use the IATA (3 letters).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- For example: London Heathrow would be LHR, Paris Charles-de-Gaulle would be CDG, etc.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- You can use lowercase, uppercase, or a mix if you really want to; as long as it is a valid IATA.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='Airline Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.help_tab, text='- When entering an airline, you must use the ICAO (3 letters/numbers).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- For example: British Airways would be BAW, easyJet would be EZY, etc.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- Again, you can use lowercase, uppercase, or a mix if you really want to; as long as it is a valid ICAO.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='Aircraft Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.help_tab, text='- When entering an aircraft, you must use the ICAO (4 letters/numbers).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- For example: Airbus A321 NEO would be A21N, Boeing 777-300ER would be B77W, etc.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- You can use lowercase, uppercase, or a mix; as long as it is a valid ICAO.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.help_tab, text='- Unfortunately, there is no easy way to validate this, so below are the accepted aircraft:', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+
+		self.aircraft_table = ttk.Notebook(self.help_tab)
+		self.aircraft_table.pack(fill='both', expand=True, pady=10)
+
+		self.airbus_tab = tk.Frame(self.aircraft_table)
+		self.boeing_tab = tk.Frame(self.aircraft_table)
+		self.regional_tab = tk.Frame(self.aircraft_table)
+
+		self.aircraft_table.add(self.airbus_tab, text='Airbus')
+		self.aircraft_table.add(self.boeing_tab, text='Boeing')
+		self.aircraft_table.add(self.regional_tab, text='Regional / Turboprop')
+
+		# airbus
+		tk.Label(self.airbus_tab, text='A318, A319, A320, A20N (A320neo), A321, A21N (A321neo), A332 (A330-200), A333 (A330-300)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.airbus_tab, text='A338 (A330-800neo), A339 (A330-900neo), A343 (A340-300), A346 (A340-600), A388 (A380)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+
+		# boeing
+		tk.Label(self.boeing_tab, text='B733 (737-300), B734 (737-400), B735 (737-500), B736 (737-600), B737 (737-700), B738 (737-800), B739 (737-900)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.boeing_tab, text='B38M (737 MAX 8), B39M (737 MAX 9), B744 (747-400), B748 (747-8)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.boeing_tab, text='B763 (767-300), B772 (777-200), B77L (777-200LR), B77W (777-300ER), B788 (787-8), B789 (787-9), B78X (787-10)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+
+		# regional/turboprop/commuter
+		tk.Label(self.regional_tab, text='E170, E175, E190, E195', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.regional_tab, text='CRJ2 (CRJ-200), CRJ7 (CRJ-700), CRJ9 (CRJ-900), CRJX (CRJ-1000)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.regional_tab, text='AT43, AT45, AT46, AT72, AT76 (entire ATR family basically)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.regional_tab, text='DH8D (Dash 8 Q400), DH8A (Dash 8 series variants sometimes grouped)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
 
 		# INITIALISE FLIGHT INFO DISPLAY
 		# identification
@@ -496,7 +545,14 @@ class BaseConfigEditor(tk.Frame):
 		if key == 'airlines' and (not value.isalnum() or len(value) > 3):
 			return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (ICAO) eg. BAW = British Airways')
 		if key == 'aircraft' and (not value.isalnum() or len(value) > 4):
-			return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (IATA) eg. A20N = A320 NEO')
+			return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (ICAO) eg. A20N = A320 NEO')
+
+		if key == 'airports' and not validate_airport(value):
+			return messagebox.showinfo('Invalid Entry', 'Airport not found.')
+		if key == 'airlines' and not validate_airline(value):
+			return messagebox.showinfo('Invalid Entry', 'Airline not found.')
+		if key == 'aircraft' and not validate_aircraft(value):
+			return messagebox.showinfo('Invalid Entry', 'Aircraft not found.')
 
 		if value in self.config_data[key]:
 			return messagebox.showinfo('Duplicate Entry', f'{value} already exists in your config.')
@@ -559,7 +615,14 @@ class BaseConfigEditor(tk.Frame):
 			if key == 'airlines' and (not new.isalnum() or len(new) > 3):
 				return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (ICAO) eg. BAW = British Airways')
 			if key == 'aircraft' and (not new.isalnum() or len(new) > 4):
-				return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (IATA) eg. A20N = A320 NEO')
+				return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (ICAO) eg. A20N = A320 NEO')
+
+			if key == 'airports' and not validate_airport(value):
+				return messagebox.showinfo('Invalid Entry', 'Airport not found.')
+			if key == 'airlines' and not validate_airline(value):
+				return messagebox.showinfo('Invalid Entry', 'Airline not found.')
+			if key == 'aircraft' and not validate_aircraft(value):
+				return messagebox.showinfo('Invalid Entry', 'Aircraft not found.')
 
 			if new in self.config_data[key]:
 				return messagebox.showinfo('Duplicate Entry', f'{new} already exists in your config.')
@@ -666,7 +729,7 @@ class FlightLog(tk.Frame):
 		)
 
 		self.notebook = ttk.Notebook(self)
-		self.notebook.pack(fill='both', expand=True, pady=10)
+		self.notebook.pack(fill='both', expand=True, pady=20)
 		self.logbook_tab = tk.Frame(self.notebook)
 		self.stats_tab = tk.Frame(self.notebook)
 		self.notebook.add(self.logbook_tab, text='Logbook')
@@ -814,7 +877,7 @@ class FlightLog(tk.Frame):
 
 		self.aircraft_combo['values'] = [
 			'All',
-			*sorted({x['aircraft_iata'] for x in self.log})
+			*sorted({x['aircraft_icao'] for x in self.log})
 		]
 
 		self.airline_combo['values'] = [
@@ -895,7 +958,7 @@ class FlightLog(tk.Frame):
 					continue
 
 			if self.aircraft_filter.get() != "All":
-				if flight['aircraft_iata'] != self.aircraft_filter.get():
+				if flight['aircraft_icao'] != self.aircraft_filter.get():
 					continue
 
 			if self.airline_filter.get() != "All":
