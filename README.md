@@ -1,17 +1,10 @@
 *Made by Ben Collingridge*
 
-## Pre-requisites
-
-### How to create .exe file
-1. First, install PyInstaller [PyInstaller - PyPI](https://pypi.org/project/pyinstaller/)
-
-`py -m pip install pyinstaller`
-
-2. Next, run PyInstaller:
-
-`py -m PyInstaller --noconsole --onefile --name "Flight Generator" --icon "assets/app_icon.ico" --add-data "assets/app_icon.ico;assets" main.py`
-
-*If you cannot create an .exe file, you can just run main.py or rename main.py to main.pyw for no console.*
+## Installation
+- Download FlightGeneratorSetup.exe in the installer folder.
+- Follow instructions to install.
+- App can be uninstalled like any other app by going to your OS settings.
+- Eg Windows: Windows Settings (WIN + I) -> Apps -> Installed Apps -> Flight Generator -> Uninstall -> Follow uninstallation wizard.
 
 ## Getting started with Flight Generator
 ### Config files
