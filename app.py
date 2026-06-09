@@ -617,11 +617,11 @@ class BaseConfigEditor(tk.Frame):
 			if key == 'aircraft' and (not new.isalnum() or len(new) > 4):
 				return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (ICAO) eg. A20N = A320 NEO')
 
-			if key == 'airports' and not validate_airport(value):
+			if key == 'airports' and not validate_airport(new):
 				return messagebox.showinfo('Invalid Entry', 'Airport not found.')
-			if key == 'airlines' and not validate_airline(value):
+			if key == 'airlines' and not validate_airline(new):
 				return messagebox.showinfo('Invalid Entry', 'Airline not found.')
-			if key == 'aircraft' and not validate_aircraft(value):
+			if key == 'aircraft' and not validate_aircraft(new):
 				return messagebox.showinfo('Invalid Entry', 'Aircraft not found.')
 
 			if new in self.config_data[key]:
