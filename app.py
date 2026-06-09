@@ -5,10 +5,12 @@ from tkintermapview import TkinterMapView
 import threading
 import time
 import math
+import sys
+from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
 from backend import *
 
-TITLE = 'Flight Generator v2.1.0 | Ben Collingridge'
+TITLE = 'Flight Generator v2.1.1 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -32,10 +34,7 @@ def centre_window(window, width, height) -> None:
 	window.geometry(f'{width}x{height}+{x}+{y}')
 
 def resource_path(relative_path):
-	try:
-		base_path = sys._MEIPASS # PyInstaller temp folder
-	except Exception:
-		base_path = os.path.abspath('.')
+	base_path = os.path.dirname(sys.executable)
 	return os.path.join(base_path, relative_path)
 
 class App(tk.Tk):
@@ -47,7 +46,8 @@ class App(tk.Tk):
 
 		self.title(TITLE)
 		centre_window(self, WIDTH, HEIGHT)
-		self.iconbitmap(resource_path('./assets/app_icon.ico'))
+		#self.iconbitmap(resource_path('assets/app_icon.ico'))
+		self.after(0, lambda: self.iconbitmap(resource_path('assets/app_icon.ico')))
 
 		# container holds all pages
 		container = tk.Frame(self)
@@ -88,6 +88,9 @@ class HomePage(tk.Frame):
 		self.cooldown_active = False
 		self.cooldown_seconds = 0
 
+		self.departure_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/green_pin.png')))
+		self.arrival_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/red_pin.png')))
+
 		tk.Label(self, text='Flight Data', font=('Arial', 16)).pack(pady=(15, 5))
 		
 		config_row = tk.Frame(self)
@@ -122,14 +125,16 @@ class HomePage(tk.Frame):
 			width=800,
 			height=600
 		)
-		self.map_widget.pack(fill='both', expand=True)
+		self.map_widget.pack(fill='both', expand=True, padx=20, pady=20)
 
 		# PATCH NOTES
-		tk.Label(self.patch_notes_tab, text='v2.1.0 (Major Update)', font=('Arial', 14)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='v2.1.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Minor tweaks to map visuals.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='v2.1.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added interactive map which shows the generated route.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Please note that the route is shown "as the crow flies" (no airways).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- This will update whenever you generate a new flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.0.0 (Major Update)', font=('Arial', 14)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='v2.0.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Brand new GUI.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# INITIALISE FLIGHT INFO DISPLAY
@@ -316,6 +321,9 @@ class HomePage(tk.Frame):
 		self.map_widget.delete_all_marker()
 		self.map_widget.delete_all_path()
 
+		self.map_widget.update()
+		self.map_widget.update_idletasks()
+
 		centre_lat = (f.departure_coords[0] + f.arrival_coords[0]) / 2
 		centre_lon = (f.departure_coords[1] + f.arrival_coords[1]) / 2
 		
@@ -334,24 +342,31 @@ class HomePage(tk.Frame):
 		zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
 		self.map_widget.set_zoom(zoom)
 
+		self.map_widget.update_idletasks()
+		self.after(50, lambda: self._draw_map(f))
+
+		self.after(200, lambda: self.start_cooldown_ui(5))
+
+	def _draw_map(self, f):
 		self.map_widget.set_marker(
 			f.departure_coords[0],
 			f.departure_coords[1],
-			text=f.departure_iata
+			text=f.departure_iata,
+			icon=self.departure_icon
 		)
 
 		self.map_widget.set_marker(
 			f.arrival_coords[0],
 			f.arrival_coords[1],
-			text=f.arrival_iata
+			text=f.arrival_iata,
+			icon=self.arrival_icon
 		)
 
-		self.map_widget.set_path([
-			f.departure_coords,
-			f.arrival_coords
-		])
-
-		self.start_cooldown_ui(5)
+		self.map_widget.set_path(
+			[f.departure_coords, f.arrival_coords],
+			width=2,
+			color='dodgerblue'
+		)
 
 class BaseConfigEditor(tk.Frame):
 	def __init__(self, parent, controller):
