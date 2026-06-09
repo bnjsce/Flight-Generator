@@ -165,6 +165,7 @@ def add_flight_to_log(flight):
 	log.append({
 		"date": datetime.now().strftime("%d/%m/%Y"),
 		"aircraft": flight.aircraft_type,
+		"aircraft_iata": flight.aircraft_iata,
 		"callsign": flight.callsign,
 		"departure": flight.departure_iata,
 		"arrival": flight.arrival_iata,

@@ -494,7 +494,7 @@ class BaseConfigEditor(tk.Frame):
 		if key == 'airports' and (not value.isalpha() or len(value) > 3):
 			return messagebox.showinfo('Invalid Entry', 'Airport must be 3 letters (IATA) eg. LHR = London Heathrow')
 		if key == 'airlines' and (not value.isalnum() or len(value) > 3):
-			return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (IATA) eg. BAW = British Airways')
+			return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (ICAO) eg. BAW = British Airways')
 		if key == 'aircraft' and (not value.isalnum() or len(value) > 4):
 			return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (IATA) eg. A20N = A320 NEO')
 
@@ -557,7 +557,7 @@ class BaseConfigEditor(tk.Frame):
 			if key == 'airports' and (not new.isalpha() or len(new) > 3):
 				return messagebox.showinfo('Invalid Entry', 'Airport must be 3 letters (IATA) eg. LHR = London Heathrow')
 			if key == 'airlines' and (not new.isalnum() or len(new) > 3):
-				return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (IATA) eg. BAW = British Airways')
+				return messagebox.showinfo('Invalid Entry', 'Airline must be 3 letters/numbers (ICAO) eg. BAW = British Airways')
 			if key == 'aircraft' and (not new.isalnum() or len(new) > 4):
 				return messagebox.showinfo('Invalid Entry', 'Aircraft must be 4 letters/numbers (IATA) eg. A20N = A320 NEO')
 
@@ -814,7 +814,7 @@ class FlightLog(tk.Frame):
 
 		self.aircraft_combo['values'] = [
 			'All',
-			*sorted({x['aircraft'] for x in self.log})
+			*sorted({x['aircraft_iata'] for x in self.log})
 		]
 
 		self.airline_combo['values'] = [
@@ -895,7 +895,7 @@ class FlightLog(tk.Frame):
 					continue
 
 			if self.aircraft_filter.get() != "All":
-				if flight['aircraft'] != self.aircraft_filter.get():
+				if flight['aircraft_iata'] != self.aircraft_filter.get():
 					continue
 
 			if self.airline_filter.get() != "All":
