@@ -798,7 +798,7 @@ class FlightLog(tk.Frame):
 
 		# update stats
 		self.l_total_flights.set(f"Total Flights: {self.flight_stats['total_flights']}")
-		self.l_total_distance.set(f"Total Distance Flown: {self.flight_stats['total_distance']} NM")
+		self.l_total_distance.set(f"Total Distance Flown: {round(self.flight_stats['total_distance'], 2)} NM")
 		self.l_total_time.set(f"Total Est. Flight Time: {self.flight_stats['total_time']}")
 		self.l_average_flight_length.set(f"Average Flight Length: {round(self.flight_stats['average_flight_length'], 2)} NM")
 
