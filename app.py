@@ -34,7 +34,10 @@ def centre_window(window, width, height) -> None:
 	window.geometry(f'{width}x{height}+{x}+{y}')
 
 def resource_path(relative_path):
-	base_path = os.path.dirname(sys.executable)
+	if os.path.exists(os.path.join(os.path.dirname(sys.executable), relative_path)):
+		base_path = os.path.dirname(sys.executable)
+	else:
+		base_path = os.path.abspath('.')
 	return os.path.join(base_path, relative_path)
 
 class App(tk.Tk):
@@ -46,7 +49,6 @@ class App(tk.Tk):
 
 		self.title(TITLE)
 		centre_window(self, WIDTH, HEIGHT)
-		#self.iconbitmap(resource_path('assets/app_icon.ico'))
 		self.after(0, lambda: self.iconbitmap(resource_path('assets/app_icon.ico')))
 
 		# container holds all pages
@@ -345,7 +347,7 @@ class HomePage(tk.Frame):
 		self.map_widget.update_idletasks()
 		self.after(50, lambda: self._draw_map(f))
 
-		self.after(200, lambda: self.start_cooldown_ui(5))
+		self.start_cooldown_ui(5)
 
 	def _draw_map(self, f):
 		self.map_widget.set_marker(
