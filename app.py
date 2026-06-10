@@ -11,7 +11,9 @@ from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
 from backend import *
 
-TITLE = 'Flight Generator v2.1.3 | Ben Collingridge'
+from SimConnect import *
+
+TITLE = 'Flight Generator v2.2.0 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -59,11 +61,21 @@ class App(tk.Tk):
 		self.frames = {}
 		self.config_name = ''
 
+		self.protocol('WM_DELETE_WINDOW', self.on_close)
+
 		for F in (HomePage, EditConfig, NewConfig, FlightLog):
 			frame = F(container, self)
 			self.frames[F.__name__] = frame
 
 		self.show_frame('HomePage')
+
+	def on_close(self):
+		home = self.frames.get('HomePage')
+
+		if home and home.aircraft_update_job is not None:
+			home.after_cancel(home.aircraft_update_job)
+
+		self.destroy()
 
 	def show_frame(self, name):
 		'''
@@ -87,6 +99,16 @@ class HomePage(tk.Frame):
 	def __init__(self, parent, controller):
 		super().__init__(parent)
 
+		self.aircraft_update_job = None
+
+		self.sim_connected = False
+		self.sm = None
+		self.aq = None
+
+		self.aircraft_marker = None
+		self.last_rendered_heading = 90
+		self.heading_threshold = 5
+
 		self.flight_details = None
 		self.cooldown_active = False
 		self.cooldown_seconds = 0
@@ -94,6 +116,10 @@ class HomePage(tk.Frame):
 		self.departure_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/green_pin.png')))
 		self.arrival_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/red_pin.png')))
 		self.centre_dot_icon = ImageTk.PhotoImage(Image.open(resource_path('assets/centre_dot.png')))
+
+		self.plane_icon_rotatable = Image.open(resource_path('assets/plane_icon.png'))
+		self.plane_icon = ImageTk.PhotoImage(self.plane_icon_rotatable)
+		self.last_icon = ImageTk.PhotoImage(self.plane_icon_rotatable)
 
 		tk.Label(self, text='Flight Data', font=('Arial', 16)).pack(pady=(15, 5))
 		
@@ -111,8 +137,12 @@ class HomePage(tk.Frame):
 
 		# get flight controls
 		flight_details = None
-		self.get_flight_btn = tk.Button(self, text='Get Flight!', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
-		self.get_flight_btn.pack(ipadx=15, pady=(12, 0))
+		flight_control_row = tk.Frame(self)
+		flight_control_row.pack()
+		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
+		self.get_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
+		self.simconnect_btn = tk.Button(flight_control_row, text='Refresh SimConnect', command=self.try_simconnect)
+		self.simconnect_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
@@ -131,11 +161,35 @@ class HomePage(tk.Frame):
 		self.map_widget = TkinterMapView(
 			self.map_tab,
 			width=800,
-			height=600
+			height=480
 		)
-		self.map_widget.pack(fill='both', expand=True, padx=20, pady=20)
+		self.map_widget.pack(fill='x', padx=20, pady=20, anchor='w')
+		self.map_widget.set_zoom(0)
+
+		# SimConnect tracking UI
+		self.live_altitude = tk.StringVar(value='Altitude (MSL): N/A')
+		self.live_heading = tk.StringVar(value='Heading: N/A')
+		self.live_airspeed = tk.StringVar(value='Airspeed: N/A')
+		self.live_ground_speed = tk.StringVar(value='Ground Speed: N/A')
+		self.live_vertical_speed = tk.StringVar(value='Vertical Speed: N/A')
+		self.live_wind = tk.StringVar(value='Wind: N/A')
+		self.live_grounded = tk.StringVar(value='On ground: N/A')
+
+		tk.Label(self.map_tab, textvariable=self.live_altitude, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_heading, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_airspeed, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_ground_speed, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_vertical_speed, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_wind, font=('Arial', 14)).pack(anchor='w', padx=20)
+		tk.Label(self.map_tab, textvariable=self.live_grounded, font=('Arial', 14)).pack(anchor='w', padx=20)
+
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.2.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added SimConnect support.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- This means when your simulator is open, you will see your aircraft on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- The map will reflect your aircraft position and heading.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Underneath the map, it shows live flight information such as altitude and IAS.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.1.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added airport and airline validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -150,8 +204,6 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- Added interactive map which shows the generated route.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Please note that the route is shown "as the crow flies" (no airways).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- This will update whenever you generate a new flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.0.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Brand new GUI.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -264,6 +316,33 @@ class HomePage(tk.Frame):
 		else:
 			self.config_text.set('Config: NONE')
 
+		try:
+			self.sm = SimConnect()
+			self.aq = AircraftRequests(self.sm)
+			self.sim_connected = True
+		except:
+			self.sim_connected = False
+
+	def try_simconnect(self):
+		if self.sm is not None:
+			self.sm.exit()
+		self.sm = None
+		self.aq = None
+		self.sim_connected = False
+
+		if self.aircraft_marker:
+			self.aircraft_marker.delete()
+			self.aircraft_marker = None
+
+		try:
+			self.sm = SimConnect()
+			self.aq = AircraftRequests(self.sm)
+			self.sim_connected = True
+		except:
+			self.sim_connected = False
+
+		self.update_aircraft()
+
 	def replace_config(self, controller):
 		'''
 		Select a config file via native file explorer.
@@ -374,12 +453,112 @@ class HomePage(tk.Frame):
 		self.departure_metar.set(f.departure_metar)
 		self.arrival_metar.set(f.arrival_metar)
 
-		# draw a map
+		self.draw_static_map(f)
+		self.update_aircraft()
+		self.start_cooldown_ui(5)
+
+	def handle_sim_disconnect(self):
+		self.sim_connected = False
+
+		if self.aircraft_update_job:
+			self.after_cancel(self.aircraft_update_job)
+			self.aircraft_update_job = None
+
+		if self.aircraft_marker:
+			self.aircraft_marker.delete()
+			self.aircraft_marker = None
+
+		self.live_altitude.set('Altitude (MSL): N/A')
+		self.live_heading.set('Heading: N/A')
+		self.live_airspeed.set('Airspeed: N/A')
+		self.live_ground_speed.set('Ground Speed: N/A')
+		self.live_vertical_speed.set('Vertical Speed: N/A')
+		self.live_wind.set('Wind: N/A')
+		self.live_grounded.set('On ground: N/A')
+
+		try:
+			self.sm.exit()
+		except:
+			pass
+
+		self.sm = None
+		self.aq = None
+
+	def get_rotated_plane_icon(self, heading):
+		rotated = self.plane_icon_rotatable.rotate(
+			-(heading - 90),
+			resample=Image.BICUBIC,
+			expand=True
+		)
+		self.last_rendered_heading = heading
+		return ImageTk.PhotoImage(rotated)
+
+	def update_aircraft(self):
+		if not self.sim_connected:
+			return messagebox.showerror('SimConnect Error', 'Could not connect to simulator.')
+
+		try:
+			live_data = {
+				'lat': self.aq.get('PLANE_LATITUDE'),
+				'lon': self.aq.get('PLANE_LONGITUDE'),
+				'heading': math.degrees(self.aq.get('PLANE_HEADING_DEGREES_TRUE')),
+				'altitude': math.floor(self.aq.get('PLANE_ALTITUDE')),
+				'airspeed': math.floor(self.aq.get('AIRSPEED_INDICATED')),
+				'ground_speed': math.floor(self.aq.get('GROUND_VELOCITY')),
+				'vertical_speed': math.floor(self.aq.get('VERTICAL_SPEED')),
+				'wind_direction': self.aq.get('AMBIENT_WIND_DIRECTION'),
+				'wind_speed': math.floor(self.aq.get('AMBIENT_WIND_VELOCITY')),
+				'on_ground': 'Yes' if self.aq.get('SIM_ON_GROUND') == 1 else 'No'
+			}
+		except Exception:
+			self.handle_sim_disconnect()
+			return
+
+		lat = live_data['lat']
+		lon = live_data['lon']
+		heading = live_data['heading']
+		icon = self.last_icon
+
+		self.live_altitude.set(f"Altitude (MSL): {live_data['altitude']} ft")
+		if heading is not None:
+			self.live_heading.set(f"Heading: {heading:03.0f}°")
+		else:
+			self.live_heading.set(f"Heading: N/A")
+		self.live_airspeed.set(f"Airspeed: {live_data['airspeed']} kts")
+		self.live_ground_speed.set(f"Ground Speed: {live_data['ground_speed']} kts")
+		self.live_vertical_speed.set(f"Vertical Speed: {live_data['vertical_speed']} fpm")
+		self.live_wind.set(f"Wind: {live_data['wind_direction']:03.0f}° @ {live_data['wind_speed']} kts")
+		self.live_grounded.set(f"On ground: {live_data['on_ground']}")
+
+		if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+			# CREATE ICON
+			if isinstance(heading, (int, float)):
+				icon = self.get_rotated_plane_icon(heading)
+				self.last_rendered_heading = heading
+			else:
+				icon = self.plane_icon
+
+			# CREATE/UPDATE MARKER
+			if self.aircraft_marker is None:
+				self.aircraft_marker = self.map_widget.set_marker(
+					lat, lon,
+					text='',
+					icon=self.plane_icon
+				)
+			else:
+				self.aircraft_marker.delete()
+				self.aircraft_marker = self.map_widget.set_marker(
+					lat, lon,
+					text='',
+					icon=self.last_icon
+				)
+
+		self.last_icon = icon
+		self.aircraft_update_job = self.after(500, self.update_aircraft)
+
+	def draw_static_map(self, f):
 		self.map_widget.delete_all_marker()
 		self.map_widget.delete_all_path()
-
-		self.map_widget.update()
-		self.map_widget.update_idletasks()
 
 		self.centre_lat = (f.departure_coords[0] + f.arrival_coords[0]) / 2
 		self.centre_lon = (f.departure_coords[1] + f.arrival_coords[1]) / 2
@@ -400,11 +579,7 @@ class HomePage(tk.Frame):
 		self.map_widget.set_zoom(zoom)
 
 		self.map_widget.update_idletasks()
-		self.after(50, lambda: self._draw_map(f))
 
-		self.start_cooldown_ui(5)
-
-	def _draw_map(self, f):
 		self.map_widget.set_marker(
 			f.departure_coords[0],
 			f.departure_coords[1],

@@ -180,6 +180,13 @@ def get_random_flight(config_path) -> str or object:
 			rand_flight = suitable_flights[rand_idx]
 			return Flight(rand_flight, temp[selected_iata][:3])
 
+def heading_diff(a, b):
+	if a is None:
+		return 0
+	else:
+		d = abs(a - b) % 360
+		return min(d, 360 - d)
+
 def get_flight_log():
 	if not os.path.exists(LOG_FILE):
 		return []
