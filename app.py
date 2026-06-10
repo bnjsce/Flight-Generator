@@ -180,7 +180,7 @@ class HomePage(tk.Frame):
 		self.aircraft_table.add(self.regional_tab, text='Regional / Turboprop')
 
 		# airbus
-		tk.Label(self.airbus_tab, text='A318, A319, A320, A20N (A320neo), A321, A21N (A321neo), A332 (A330-200), A333 (A330-300)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.airbus_tab, text='A318, A319, A19N (A319neo), A320, A20N (A320neo), A321, A21N (A321neo), A332 (A330-200), A333 (A330-300)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.airbus_tab, text='A338 (A330-800neo), A339 (A330-900neo), A343 (A340-300), A346 (A340-600), A388 (A380)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
 
 		# boeing
