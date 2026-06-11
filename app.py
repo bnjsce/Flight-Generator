@@ -13,7 +13,7 @@ from backend import *
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.2.0 | Ben Collingridge'
+TITLE = 'Flight Generator v2.2.1 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -141,8 +141,11 @@ class HomePage(tk.Frame):
 		flight_control_row.pack()
 		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
 		self.get_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
-		self.simconnect_btn = tk.Button(flight_control_row, text='Refresh SimConnect', command=self.try_simconnect)
+
+		self.simconnect_btn = tk.Button(flight_control_row, text='Start SimConnect', command=self.try_simconnect)
 		self.simconnect_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
+
+		tk.Button(flight_control_row, text='Stop SimConnect', command=self.handle_sim_disconnect).pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
@@ -161,10 +164,27 @@ class HomePage(tk.Frame):
 		self.map_widget = TkinterMapView(
 			self.map_tab,
 			width=800,
-			height=480
+			height=515
 		)
-		self.map_widget.pack(fill='x', padx=20, pady=20, anchor='w')
+		self.map_widget.pack(fill='x', padx=15, pady=10, anchor='w')
 		self.map_widget.set_zoom(0)
+
+		self.filter_buttons_row = tk.Frame(self.map_tab)
+		self.filter_buttons_row.pack(fill='both', side='right')
+
+		self.tracking_row = tk.Frame(self.map_tab)
+		self.tracking_row.pack(fill='both', side='left')
+
+		self.path_visible = True
+		self.pins_visible = True
+		self.follow_aircraft = False
+
+		tk.Button(self.filter_buttons_row, text='Centre Route', command=lambda: self.draw_static_map(self.flight_details) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=31, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Centre Aircraft', command=lambda: self.draw_static_map(self.flight_details, recentre=True) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=27, pady=(8, 0), padx=100)
+		self.follow_aircraft_btn = tk.Button(self.filter_buttons_row, text='Follow Aircraft', bg='#f7c5c5', command=lambda: self.toggle_map_widgets(self.path_visible, self.pins_visible, not self.follow_aircraft))
+		self.follow_aircraft_btn.pack(ipadx=27, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Toggle Path', command=lambda: self.toggle_map_widgets(not self.path_visible, self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Toggle Pins', command=lambda: self.toggle_map_widgets(self.path_visible, not self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
 
 		# SimConnect tracking UI
 		self.live_altitude = tk.StringVar(value='Altitude (MSL): N/A')
@@ -175,16 +195,21 @@ class HomePage(tk.Frame):
 		self.live_wind = tk.StringVar(value='Wind: N/A')
 		self.live_grounded = tk.StringVar(value='On ground: N/A')
 
-		tk.Label(self.map_tab, textvariable=self.live_altitude, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_heading, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_airspeed, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_ground_speed, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_vertical_speed, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_wind, font=('Arial', 14)).pack(anchor='w', padx=20)
-		tk.Label(self.map_tab, textvariable=self.live_grounded, font=('Arial', 14)).pack(anchor='w', padx=20)
-
+		tk.Label(self.tracking_row, textvariable=self.live_altitude, font=('Arial', 13)).pack(anchor='e', padx=100, pady=(2, 0))
+		tk.Label(self.tracking_row, textvariable=self.live_heading, font=('Arial', 13)).pack(anchor='e', padx=100)
+		tk.Label(self.tracking_row, textvariable=self.live_airspeed, font=('Arial', 13)).pack(anchor='e', padx=100)
+		tk.Label(self.tracking_row, textvariable=self.live_ground_speed, font=('Arial', 13)).pack(anchor='e', padx=100)
+		tk.Label(self.tracking_row, textvariable=self.live_vertical_speed, font=('Arial', 13)).pack(anchor='e', padx=100)
+		tk.Label(self.tracking_row, textvariable=self.live_wind, font=('Arial', 13)).pack(anchor='e', padx=100)
+		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.2.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Fixed SimConnect map issues.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added refresh and disconnect SimConnect buttons.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- SimConnect no longer tries to automatically launch after generating a flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- For live aircraft traffic, you must now click the start SimConnect button.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added map controls and filters for more customisable interface.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.2.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added SimConnect support.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- This means when your simulator is open, you will see your aircraft on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -198,12 +223,6 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- Added simple stats page via the flight log page.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Distance and heading now shown at the centre point on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Timezone name and UTC offset now shown on departure and arrival pins on the map. For example: LHR = BST (UTC+1)', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.1.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Minor tweaks to map visuals.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.1.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added interactive map which shows the generated route.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Please note that the route is shown "as the crow flies" (no airways).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- This will update whenever you generate a new flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -454,7 +473,6 @@ class HomePage(tk.Frame):
 		self.arrival_metar.set(f.arrival_metar)
 
 		self.draw_static_map(f)
-		self.update_aircraft()
 		self.start_cooldown_ui(5)
 
 	def handle_sim_disconnect(self):
@@ -483,6 +501,8 @@ class HomePage(tk.Frame):
 
 		self.sm = None
 		self.aq = None
+		self.simconnect_btn.config(text='Start SimConnect')
+		self.draw_static_map(self.flight_details)
 
 	def get_rotated_plane_icon(self, heading):
 		rotated = self.plane_icon_rotatable.rotate(
@@ -495,7 +515,14 @@ class HomePage(tk.Frame):
 
 	def update_aircraft(self):
 		if not self.sim_connected:
-			return messagebox.showerror('SimConnect Error', 'Could not connect to simulator.')
+			self.simconnect_btn.config(text='Start SimConnect')
+			if self.aircraft_marker is not None:
+				self.aircraft_marker.delete()
+			self.aircraft_marker = None
+			messagebox.showerror('SimConnect Error', 'Could not connect to simulator.')
+			return
+
+		self.simconnect_btn.config(text='Refresh SimConnect')
 
 		try:
 			live_data = {
@@ -514,8 +541,8 @@ class HomePage(tk.Frame):
 			self.handle_sim_disconnect()
 			return
 
-		lat = live_data['lat']
-		lon = live_data['lon']
+		self.live_lat = live_data['lat']
+		self.live_lon = live_data['lon']
 		heading = live_data['heading']
 		icon = self.last_icon
 
@@ -530,7 +557,9 @@ class HomePage(tk.Frame):
 		self.live_wind.set(f"Wind: {live_data['wind_direction']:03.0f}° @ {live_data['wind_speed']} kts")
 		self.live_grounded.set(f"On ground: {live_data['on_ground']}")
 
-		if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+		if self.aircraft_marker is not None:
+			self.aircraft_marker.delete()
+		if isinstance(self.live_lat, (int, float)) and isinstance(self.live_lon, (int, float)):
 			# CREATE ICON
 			if isinstance(heading, (int, float)):
 				icon = self.get_rotated_plane_icon(heading)
@@ -541,28 +570,54 @@ class HomePage(tk.Frame):
 			# CREATE/UPDATE MARKER
 			if self.aircraft_marker is None:
 				self.aircraft_marker = self.map_widget.set_marker(
-					lat, lon,
+					self.live_lat, self.live_lon,
 					text='',
 					icon=self.plane_icon
 				)
 			else:
 				self.aircraft_marker.delete()
 				self.aircraft_marker = self.map_widget.set_marker(
-					lat, lon,
+					self.live_lat, self.live_lon,
 					text='',
 					icon=self.last_icon
 				)
 
+			if self.follow_aircraft:
+				self.map_widget.set_position(self.live_lat, self.live_lon)
+
 		self.last_icon = icon
 		self.aircraft_update_job = self.after(500, self.update_aircraft)
 
-	def draw_static_map(self, f):
+	def toggle_map_widgets(self, path, pins, aircraft):
+		self.path_visible = path
+		self.pins_visible = pins
+		self.follow_aircraft = aircraft
+		if self.follow_aircraft:
+			self.follow_aircraft_btn.config(text='Following Aircraft...', bg='#c8f7c5')
+		else:
+			self.follow_aircraft_btn.config(text='Follow Aircraft', bg='#f7c5c5')
+
+		if aircraft:
+			self.draw_static_map(self.flight_details, recentre=True)
+		else:
+			self.draw_static_map(self.flight_details)
+
+	def get_map_centre(self, aircraft=False):
+		lat = 0
+		lon = 0
+		if aircraft and self.sim_connected:
+			lat = self.live_lat
+			lon = self.live_lon
+		elif (self.flight_details and not aircraft) or (aircraft and not self.sim_connected):
+			lat = (self.flight_details.departure_coords[0] + self.flight_details.arrival_coords[0]) / 2
+			lon = (self.flight_details.departure_coords[1] + self.flight_details.arrival_coords[1]) / 2
+
+		return (lat, lon)
+
+	def draw_static_map(self, f, recentre=False):
 		self.map_widget.delete_all_marker()
 		self.map_widget.delete_all_path()
 
-		self.centre_lat = (f.departure_coords[0] + f.arrival_coords[0]) / 2
-		self.centre_lon = (f.departure_coords[1] + f.arrival_coords[1]) / 2
-		
 		def calculate_zoom(dep, arr):
 			lat_span = abs(dep[0] - arr[0])
 			lon_span = abs(dep[1] - arr[1])
@@ -574,41 +629,50 @@ class HomePage(tk.Frame):
 			zoom = int(8 - math.log2(span))
 			return max(2, min(10, zoom)) + 1
 
-		self.map_widget.set_position(self.centre_lat, self.centre_lon)
+		route_centre_coords = self.get_map_centre()
+		centre_coords = route_centre_coords
 		zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
+		if recentre:
+			zoom = 8
+			centre_coords = self.get_map_centre(aircraft=True)
+
+		centre_lat = centre_coords[0]
+		centre_lon = centre_coords[1]
+		self.map_widget.set_position(centre_lat, centre_lon)
 		self.map_widget.set_zoom(zoom)
 
 		self.map_widget.update_idletasks()
 
-		self.map_widget.set_marker(
-			f.departure_coords[0],
-			f.departure_coords[1],
-			text=f'{f.departure_iata}\n{f.departure_timezone} ({f.departure_time_offset})',
-			icon=self.departure_icon
-		)
+		if self.pins_visible:
+			self.map_widget.set_marker(
+				f.departure_coords[0],
+				f.departure_coords[1],
+				text=f'{f.departure_iata}\n{f.departure_timezone} ({f.departure_time_offset})',
+				icon=self.departure_icon
+			)
+			self.map_widget.set_marker(
+				f.arrival_coords[0],
+				f.arrival_coords[1],
+				text=f'{f.arrival_iata}\n{f.arrival_timezone} ({f.arrival_time_offset})',
+				icon=self.arrival_icon
+			)
 
-		self.map_widget.set_marker(
-			f.arrival_coords[0],
-			f.arrival_coords[1],
-			text=f'{f.arrival_iata}\n{f.arrival_timezone} ({f.arrival_time_offset})',
-			icon=self.arrival_icon
-		)
+			heading = f.calc_heading(f.departure_coords, f.arrival_coords)
+			label = f'{f.distance} NM\nHDG {heading:03.0f}°'
 
-		self.map_widget.set_path(
-			[f.departure_coords, f.arrival_coords],
-			width=2,
-			color='dodgerblue'
-		)
+			self.map_widget.set_marker(
+				route_centre_coords[0],
+				route_centre_coords[1],
+				text=label,
+				icon=self.centre_dot_icon
+			)
 
-		heading = f.calc_heading(f.departure_coords, f.arrival_coords)
-		label = f'{f.distance} NM\nHDG {heading:03.0f}°'
-
-		self.map_widget.set_marker(
-			self.centre_lat,
-			self.centre_lon,
-			text=label,
-			icon=self.centre_dot_icon
-		)
+		if self.path_visible:
+			self.map_widget.set_path(
+				[f.departure_coords, f.arrival_coords],
+				width=2,
+				color='dodgerblue'
+			)
 
 class BaseConfigEditor(tk.Frame):
 	def __init__(self, parent, controller):
