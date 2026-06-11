@@ -160,25 +160,25 @@ def get_random_flight(config_path) -> str or object:
 					flight_count += 1
 		temp.append(f'{origin_iata}{flight_count}')
 
-		rand_flight = None
-		if len(suitable_flights) == 0:
-			return None
-		else:
-			random.seed(secrets.randbits(64))
-			rand_idx = random.randint(0, len(suitable_flights) - 1)
-			tracking = 1
-			selected_iata = 0
-			while tracking < rand_idx:
-				airport_flights = int(temp[selected_iata][3:])
-				
-				if tracking + airport_flights < rand_idx:
-					tracking += airport_flights
-					selected_iata += 1
-				elif tracking + airport_flights > rand_idx or tracking + airport_flights == rand_idx:
-					tracking = rand_idx
+	rand_flight = None
+	if len(suitable_flights) == 0:
+		return None
+	else:
+		random.seed(secrets.randbits(64))
+		rand_idx = random.randint(0, len(suitable_flights) - 1)
+		tracking = 1
+		selected_iata = 0
+		while tracking < rand_idx:
+			airport_flights = int(temp[selected_iata][3:])
+			
+			if tracking + airport_flights < rand_idx:
+				tracking += airport_flights
+				selected_iata += 1
+			elif tracking + airport_flights > rand_idx or tracking + airport_flights == rand_idx:
+				tracking = rand_idx
 
-			rand_flight = suitable_flights[rand_idx]
-			return Flight(rand_flight, temp[selected_iata][:3])
+		rand_flight = suitable_flights[rand_idx]
+		return Flight(rand_flight, temp[selected_iata][:3])
 
 def heading_diff(a, b):
 	if a is None:
