@@ -2,7 +2,8 @@ import json
 import random
 import secrets
 import sys, os
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from pyflightdata import FlightData
 from Flight import *
 
@@ -13,12 +14,96 @@ def get_base_data_dir():
 	os.makedirs(base, exist_ok=True)
 	return base
 
+CACHE_DIR = os.path.join(get_base_data_dir(), 'cache')
+
+DEPARTURE_TTL = 3 * 60 # 3 mins
+departure_cache = {}
+
+METAR_CACHE_FILE = os.path.join(CACHE_DIR, 'metar_cache.json')
+METAR_TTL = 30 # mins
+metar_cache = {}
+
 CONFIG_DIR = os.path.join(get_base_data_dir(), 'configs')
 LOG_DIR = os.path.join(get_base_data_dir(), 'logs')
 LOG_FILE = os.path.join(LOG_DIR, 'flight_log.json')
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+def load_departure_cache(iata):
+	now = time.time()
+
+	if iata in departure_cache:
+		ts, data = departure_cache[iata]
+		if now - ts < DEPARTURE_TTL:
+			return data
+
+	data = f.get_airport_departures(iata, limit=20, earlier_data=True)
+
+	departure_cache[iata] = (now, data)
+	return data
+
+def latest_metar_cycle(dt):
+	minute = dt.minute
+
+	if minute < 30:
+		dt = dt.replace(minute=0, second=0, microsecond=0)
+	else:
+		dt = dt.replace(minute=30, second=0, microsecond=0)
+
+	return dt.isoformat()
+
+def load_metar_cache():
+	global metar_cache
+	if os.path.exists(METAR_CACHE_FILE):
+		with open(METAR_CACHE_FILE, 'r') as f:
+			metar_cache = json.load(f)
+
+def save_metar_cache():
+	with open(METAR_CACHE_FILE, 'w') as f:
+		f.write(json.dumps(metar_cache, indent=4))
+
+def cleanup_metar_cache():
+	now = time.time()
+	to_delete = []
+
+	for airport, entry in metar_cache.items():
+		if now - entry['timestamp'] > METAR_TTL:
+			to_delete.append(airport)
+
+	for airport in to_delete:
+		del metar_cache[airport]
+
+def get_cached_metar(iata):
+	now_dt = datetime.utcnow()
+	now_ts = time.time()
+
+	current_cycle = latest_metar_cycle(now_dt)
+
+	if iata in metar_cache:
+		entry = metar_cache[iata]
+
+		cached_time = entry['timestamp']
+		cached_cycle = entry.get('cycle')
+
+		if cached_cycle == current_cycle:
+			return entry['data']
+
+		if now_ts - cached_time < METAR_TTL:
+			if cached_cycle == current_cycle:
+				return entry['data']
+
+	data = f.get_airport_metars(iata)
+
+	metar_cache[iata] = {
+		'timestamp': now_ts,
+		'cycle': current_cycle,
+		'data': data
+	}
+
+	save_metar_cache()
+	return data
 
 def write_data(data, file_path) -> None:
 	'''
@@ -137,14 +222,14 @@ def get_random_flight(config_path) -> str or object:
 	'''
 	Randomly selects a flight based on user config data.
 	'''
+	cleanup_metar_cache()
 	user_config = get_user_config(config_path)
 
 	suitable_flights = []
 
-	temp = []
 	for i in range(len(user_config['airports'])):
 		origin_iata = user_config['airports'][i]
-		origin_departures = f.get_airport_departures(origin_iata, limit=25, earlier_data=True)
+		origin_departures = load_departure_cache(origin_iata)
 		flight_count = 0
 		for departure in origin_departures:
 			accepted_airlines = user_config['airlines']
@@ -156,29 +241,14 @@ def get_random_flight(config_path) -> str or object:
 				block_time_h = int(block_time[0].replace('h', ''))
 				block_time_m = int(block_time[1].replace('m', ''))
 				if block_time_h < int(user_config['max_block_time']) or (block_time_h == int(user_config['max_block_time']) and block_time_m == 0):
-					suitable_flights.append(flight)
-					flight_count += 1
-		temp.append(f'{origin_iata}{flight_count}')
+					suitable_flights.append((flight, origin_iata))
 
 	rand_flight = None
 	if len(suitable_flights) == 0:
 		return None
-	else:
-		random.seed(secrets.randbits(64))
-		rand_idx = random.randint(0, len(suitable_flights) - 1)
-		tracking = 1
-		selected_iata = 0
-		while tracking < rand_idx:
-			airport_flights = int(temp[selected_iata][3:])
-			
-			if tracking + airport_flights < rand_idx:
-				tracking += airport_flights
-				selected_iata += 1
-			elif tracking + airport_flights > rand_idx or tracking + airport_flights == rand_idx:
-				tracking = rand_idx
 
-		rand_flight = suitable_flights[rand_idx]
-		return Flight(rand_flight, temp[selected_iata][:3])
+	rand_flight, origin_iata = secrets.choice(suitable_flights)
+	return Flight(rand_flight, origin_iata, f.get_airport_details(origin_iata), get_cached_metar(origin_iata), get_cached_metar(rand_flight['airport']['destination']['code']['iata']))
 
 def heading_diff(a, b):
 	if a is None:

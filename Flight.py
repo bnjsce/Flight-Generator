@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 f = FlightData()
 
 class Flight:
-	def __init__(self, rand_flight, origin_iata):
+	def __init__(self, rand_flight, origin_iata, origin_details, departure_metar, arrival_metar):
 		'''
 		Initialise Flight object. All variables are public
 		'''
@@ -16,7 +16,7 @@ class Flight:
 
 		self.aircraft_icao = rand_flight['aircraft']['model']['code'] # eg A20N (A320 NEO)
 
-		self.origin_details = f.get_airport_details(origin_iata)
+		self.origin_details = origin_details
 		# identification
 		self.callsign = rand_flight['identification']['callsign']
 		self.aircraft_type = rand_flight['aircraft']['model']['text']
@@ -35,8 +35,8 @@ class Flight:
 		# METAR and distance data
 		self.departure_coords = (self.origin_details['position']['latitude'], self.origin_details['position']['longitude'])
 		self.arrival_coords = (rand_flight['airport']['destination']['position']['latitude'], rand_flight['airport']['destination']['position']['longitude'])
-		self.departure_metar = f.get_airport_metars(self.departure_iata)
-		self.arrival_metar = f.get_airport_metars(self.arrival_iata)
+		self.departure_metar = departure_metar
+		self.arrival_metar = arrival_metar
 		self.distance = self.calc_distance(self.departure_coords, self.arrival_coords)
 		self.block_time = self.calc_flight_time(rand_flight['time']['scheduled']['departure_time'], rand_flight['time']['scheduled']['arrival_time'])
 

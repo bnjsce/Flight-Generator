@@ -13,7 +13,7 @@ from backend import *
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.2.1 | Ben Collingridge'
+TITLE = 'Flight Generator v2.3.0 | Ben Collingridge'
 WIDTH = 820
 HEIGHT = 885
 
@@ -49,6 +49,8 @@ class App(tk.Tk):
 		Initialise app (root).
 		'''
 		super().__init__()
+
+		load_metar_cache()
 
 		self.title(TITLE)
 		centre_window(self, WIDTH, HEIGHT)
@@ -131,21 +133,21 @@ class HomePage(tk.Frame):
 		if controller.config_name != '':
 			self.config_text.set(f'Config: {controller.config_name}')
 		tk.Label(config_row, textvariable=self.config_text, font=('Arial', 12)).pack(side='left')
-		tk.Button(config_row, text='EDIT', command=lambda: controller.show_frame('EditConfig') if controller.config_name != '' else messagebox.showinfo('No Config Selected', 'You have not selected a config file yet.')).pack(side='left', padx=(10, 0), ipadx=10)
-		tk.Button(config_row, text='SELECT', command=lambda: self.replace_config(controller)).pack(side='left', padx=5, ipadx=10)
-		tk.Button(config_row, text='NEW', command=lambda: controller.show_frame('NewConfig')).pack(side='left', padx=(0, 10), ipadx=10)
+		tk.Button(config_row, text='EDIT', cursor='hand2', command=lambda: controller.show_frame('EditConfig') if controller.config_name != '' else messagebox.showinfo('No Config Selected', 'You have not selected a config file yet.')).pack(side='left', padx=(10, 0), ipadx=10)
+		tk.Button(config_row, text='SELECT', cursor='hand2', command=lambda: self.replace_config(controller)).pack(side='left', padx=5, ipadx=10)
+		tk.Button(config_row, text='NEW', cursor='hand2', command=lambda: controller.show_frame('NewConfig')).pack(side='left', padx=(0, 10), ipadx=10)
 
 		# get flight controls
 		flight_details = None
 		flight_control_row = tk.Frame(self)
 		flight_control_row.pack()
-		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
+		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', cursor='hand2', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
 		self.get_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
-		self.simconnect_btn = tk.Button(flight_control_row, text='Start SimConnect', command=self.try_simconnect)
+		self.simconnect_btn = tk.Button(flight_control_row, text='Start SimConnect', cursor='hand2', command=self.try_simconnect)
 		self.simconnect_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
-		tk.Button(flight_control_row, text='Stop SimConnect', command=self.handle_sim_disconnect).pack(ipadx=20, pady=(12, 0), side='left', padx=10)
+		tk.Button(flight_control_row, text='Stop SimConnect', cursor='hand2', command=self.handle_sim_disconnect).pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
@@ -164,7 +166,8 @@ class HomePage(tk.Frame):
 		self.map_widget = TkinterMapView(
 			self.map_tab,
 			width=800,
-			height=515
+			height=515,
+			cursor='tcross'
 		)
 		self.map_widget.pack(fill='x', padx=15, pady=10, anchor='w')
 		self.map_widget.set_zoom(0)
@@ -179,12 +182,12 @@ class HomePage(tk.Frame):
 		self.pins_visible = True
 		self.follow_aircraft = False
 
-		tk.Button(self.filter_buttons_row, text='Centre Route', command=lambda: self.draw_static_map(self.flight_details) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=31, pady=(8, 0), padx=100)
-		tk.Button(self.filter_buttons_row, text='Centre Aircraft', command=lambda: self.draw_static_map(self.flight_details, recentre=True) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=27, pady=(8, 0), padx=100)
-		self.follow_aircraft_btn = tk.Button(self.filter_buttons_row, text='Follow Aircraft', bg='#f7c5c5', command=lambda: self.toggle_map_widgets(self.path_visible, self.pins_visible, not self.follow_aircraft))
+		tk.Button(self.filter_buttons_row, text='Centre Route', cursor='hand2', command=lambda: self.draw_static_map(self.flight_details) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=31, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Centre Aircraft', cursor='hand2', command=lambda: self.draw_static_map(self.flight_details, recentre=True) if self.flight_details else self.map_widget.set_zoom(0)).pack(ipadx=27, pady=(8, 0), padx=100)
+		self.follow_aircraft_btn = tk.Button(self.filter_buttons_row, text='Follow Aircraft', cursor='target', bg='#f7c5c5', command=lambda: self.toggle_map_widgets(self.path_visible, self.pins_visible, not self.follow_aircraft))
 		self.follow_aircraft_btn.pack(ipadx=27, pady=(8, 0), padx=100)
-		tk.Button(self.filter_buttons_row, text='Toggle Path', command=lambda: self.toggle_map_widgets(not self.path_visible, self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
-		tk.Button(self.filter_buttons_row, text='Toggle Pins', command=lambda: self.toggle_map_widgets(self.path_visible, not self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Toggle Path', cursor='hand2', command=lambda: self.toggle_map_widgets(not self.path_visible, self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
+		tk.Button(self.filter_buttons_row, text='Toggle Pins', cursor='hand2', command=lambda: self.toggle_map_widgets(self.path_visible, not self.pins_visible, self.follow_aircraft)).pack(ipadx=33, pady=(8, 0), padx=100)
 
 		# SimConnect tracking UI
 		self.live_altitude = tk.StringVar(value='Altitude (MSL): N/A')
@@ -204,6 +207,10 @@ class HomePage(tk.Frame):
 		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.3.0', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added METAR and departure caching to speed up flight generation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- METAR will update if new cycle or last cache was longer than 30 minutes ago.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Departure cache will update if new departure airport or last cache was longer than 3 minutes.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.2.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Fixed SimConnect map issues.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added refresh and disconnect SimConnect buttons.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -219,10 +226,6 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- Added airport and airline validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added a help tab on the home page. This outlines more information about validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.1.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added simple stats page via the flight log page.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Distance and heading now shown at the centre point on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Timezone name and UTC offset now shown on departure and arrival pins on the map. For example: LHR = BST (UTC+1)', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -323,8 +326,8 @@ class HomePage(tk.Frame):
 
 		nav = tk.Frame(self.details_tab)
 		nav.pack()
-		tk.Button(nav, text='Fly now', command=lambda: self.fly_now() if self.flight_details != None else controller.show_frame('HomePage')).pack(ipadx=15, pady=(8, 0), side='left', padx=5)
-		tk.Button(nav, text='Flight log', command=lambda: controller.show_frame('FlightLog')).pack(ipadx=15, pady=(8, 0), side='left', padx=5)
+		tk.Button(nav, text='Fly now', cursor='hand2', command=lambda: self.fly_now() if self.flight_details != None else controller.show_frame('HomePage')).pack(ipadx=15, pady=(8, 0), side='left', padx=5)
+		tk.Button(nav, text='Flight log', cursor='hand2', command=lambda: controller.show_frame('FlightLog')).pack(ipadx=15, pady=(8, 0), side='left', padx=5)
 
 	def load(self, controller):
 		'''
@@ -415,7 +418,7 @@ class HomePage(tk.Frame):
 		self.get_flight_btn.config(
 			bg='#c8f7c5',
 			text='Get Flight!',
-			cursor='arrow'
+			cursor='hand2'
 		)
 
 	def create_flight(self, controller):
@@ -426,7 +429,8 @@ class HomePage(tk.Frame):
 		if self.cooldown_active:
 			return
 
-		self.get_flight_btn.config(text='Getting flight...', bg='#698bf0')
+		self.get_flight_btn.config(text='Getting flight...', bg='#698bf0', cursor='watch')
+		self.cooldown_active = True
 
 		def task():
 			try:
@@ -605,12 +609,13 @@ class HomePage(tk.Frame):
 	def get_map_centre(self, aircraft=False):
 		lat = 0
 		lon = 0
-		if aircraft and self.sim_connected:
-			lat = self.live_lat
-			lon = self.live_lon
-		elif (self.flight_details and not aircraft) or (aircraft and not self.sim_connected):
-			lat = (self.flight_details.departure_coords[0] + self.flight_details.arrival_coords[0]) / 2
-			lon = (self.flight_details.departure_coords[1] + self.flight_details.arrival_coords[1]) / 2
+		if self.flight_details:
+			if aircraft and self.sim_connected:
+				lat = self.live_lat
+				lon = self.live_lon
+			elif not aircraft or (aircraft and not self.sim_connected):
+				lat = (self.flight_details.departure_coords[0] + self.flight_details.arrival_coords[0]) / 2
+				lon = (self.flight_details.departure_coords[1] + self.flight_details.arrival_coords[1]) / 2
 
 		return (lat, lon)
 
@@ -631,7 +636,9 @@ class HomePage(tk.Frame):
 
 		route_centre_coords = self.get_map_centre()
 		centre_coords = route_centre_coords
-		zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
+		zoom = 0
+		if self.flight_details:
+			zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
 		if recentre:
 			zoom = 8
 			centre_coords = self.get_map_centre(aircraft=True)
@@ -642,6 +649,9 @@ class HomePage(tk.Frame):
 		self.map_widget.set_zoom(zoom)
 
 		self.map_widget.update_idletasks()
+
+		if not self.flight_details:
+			return
 
 		if self.pins_visible:
 			self.map_widget.set_marker(
@@ -708,8 +718,8 @@ class BaseConfigEditor(tk.Frame):
 		).pack()
 
 		# save/cancel (overridden behaviour via methods)
-		tk.Button(self, text=self.save_text(), command=self.save_config).pack(pady=10)
-		tk.Button(self, text='Cancel', command=lambda: controller.show_frame('HomePage')).pack()
+		tk.Button(self, text=self.save_text(), cursor='hand2', command=self.save_config).pack(pady=10)
+		tk.Button(self, text='Cancel', cursor='hand2', command=lambda: controller.show_frame('HomePage')).pack()
 
 	# UI BUILDER
 	def _build_section(self, title, key, limit, is_airport=False, is_airline=False, is_aircraft=False):
@@ -734,18 +744,21 @@ class BaseConfigEditor(tk.Frame):
 			tk.Button(
 				self,
 				text=f'Add {title}',
+				cursor='hand2',
 				command=lambda: self.add_item(entry, listbox, key, limit)
 			).pack()
 		else:
 			tk.Button(
 				self,
 				text=f'Add {title[:-1]}',
+				cursor='hand2',
 				command=lambda: self.add_item(entry, listbox, key, limit)
 			).pack()
 
 		tk.Button(
 			self,
 			text='Remove Selected',
+			cursor='hand2',
 			command=lambda: self.remove_item(listbox, key)
 		).pack()
 
@@ -873,7 +886,7 @@ class BaseConfigEditor(tk.Frame):
 
 		# press enter to save edits
 		entry.bind('<Return>', lambda e: save())
-		tk.Button(popup, text='Save', command=save).pack()
+		tk.Button(popup, text='Save', cursor='hand2', command=save).pack()
 
 	# HOOKS
 
@@ -1024,12 +1037,14 @@ class FlightLog(tk.Frame):
 		tk.Button(
 			filter_frame,
 			text='Apply',
+			cursor='hand2',
 			command=self.apply_filters
 		).grid(row=1, column=4, padx=5)
 
 		tk.Button(
 			filter_frame,
 			text='Clear',
+			cursor='hand2',
 			command=self.clear_filters
 		).grid(row=1, column=5)
 
@@ -1073,12 +1088,14 @@ class FlightLog(tk.Frame):
 		tk.Button(
 			self.logbook_tab,
 			text='Delete Selected',
+			cursor='hand2',
 			command=self.delete_selected
 		).pack()
 
 		tk.Button(
 			self.logbook_tab,
 			text='Back',
+			cursor='hand2',
 			command=lambda: controller.show_frame('HomePage')
 		).pack(pady=10)
 
@@ -1092,7 +1109,7 @@ class FlightLog(tk.Frame):
 		tk.Label(self.stats_tab, textvariable=self.l_total_time, font=('Arial', 14)).pack(pady=20)
 		tk.Label(self.stats_tab, textvariable=self.l_average_flight_length, font=('Arial', 14)).pack(pady=20)
 
-		tk.Button(self.stats_tab, text='Back', command=lambda: controller.show_frame('HomePage')).pack(pady=10, anchor='s', ipadx=10)
+		tk.Button(self.stats_tab, text='Back', cursor='hand2', command=lambda: controller.show_frame('HomePage')).pack(pady=10, anchor='s', ipadx=10)
 
 	def load(self, controller):
 		self.log = get_flight_log()
