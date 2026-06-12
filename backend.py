@@ -218,7 +218,7 @@ def validate_aircraft(icao) -> bool:
 
 	return icao in valid_aircraft
 
-def get_random_flight(config_path) -> str or object:
+def get_random_flight(config_path, custom_data=None) -> str or object:
 	'''
 	Randomly selects a flight based on user config data.
 	'''
@@ -227,21 +227,34 @@ def get_random_flight(config_path) -> str or object:
 
 	suitable_flights = []
 
-	for i in range(len(user_config['airports'])):
-		origin_iata = user_config['airports'][i]
-		origin_departures = load_departure_cache(origin_iata)
-		flight_count = 0
-		for departure in origin_departures:
-			accepted_airlines = user_config['airlines']
-			accepted_aircraft = user_config['aircraft']
-			flight = departure['flight']
+	if custom_data is None:
+		for i in range(len(user_config['airports'])):
+			origin_iata = user_config['airports'][i]
+			origin_departures = load_departure_cache(origin_iata)
+			for departure in origin_departures:
+				accepted_airlines = user_config['airlines']
+				accepted_aircraft = user_config['aircraft']
+				flight = departure['flight']
 
-			if any(flight['identification']['callsign'].startswith(prefix) for prefix in accepted_airlines) and flight['aircraft']['model']['code'] in accepted_aircraft:
+				if any(flight['identification']['callsign'].startswith(prefix) for prefix in accepted_airlines) and flight['aircraft']['model']['code'] in accepted_aircraft:
+					block_time = Flight.calc_flight_time(flight['time']['scheduled']['departure_time'], flight['time']['scheduled']['arrival_time']).split(' ')
+					block_time_h = int(block_time[0].replace('h', ''))
+					block_time_m = int(block_time[1].replace('m', ''))
+					if block_time_h < int(user_config['max_block_time']) or (block_time_h == int(user_config['max_block_time']) and block_time_m == 0):
+						suitable_flights.append((flight, origin_iata))
+	else:
+		accepted_iata = custom_data['departure_iata']
+		accepted_airline = custom_data['airline']
+		accepted_aircraft = custom_data['aircraft_icao']
+		origin_departures = load_departure_cache(accepted_iata)
+		for departure in origin_departures:
+			flight = departure['flight']
+			if flight['identification']['callsign'].startswith(accepted_airline) and flight['aircraft']['model']['code'] == accepted_aircraft:
 				block_time = Flight.calc_flight_time(flight['time']['scheduled']['departure_time'], flight['time']['scheduled']['arrival_time']).split(' ')
 				block_time_h = int(block_time[0].replace('h', ''))
 				block_time_m = int(block_time[1].replace('m', ''))
 				if block_time_h < int(user_config['max_block_time']) or (block_time_h == int(user_config['max_block_time']) and block_time_m == 0):
-					suitable_flights.append((flight, origin_iata))
+					suitable_flights.append((flight, accepted_iata))
 
 	rand_flight = None
 	if len(suitable_flights) == 0:

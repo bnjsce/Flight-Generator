@@ -13,9 +13,9 @@ from backend import *
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.3.0 | Ben Collingridge'
+TITLE = 'Flight Generator v2.3.1 | Ben Collingridge'
 WIDTH = 820
-HEIGHT = 885
+HEIGHT = 890
 
 def centre_window(window, width, height) -> None:
 	'''
@@ -144,6 +144,9 @@ class HomePage(tk.Frame):
 		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', cursor='hand2', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
 		self.get_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
+		self.get_custom_flight_btn = tk.Button(flight_control_row, text='Get Flight from Arrival', cursor='hand2', command=lambda: self.create_flight(controller, custom=True) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
+		self.get_custom_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
+
 		self.simconnect_btn = tk.Button(flight_control_row, text='Start SimConnect', cursor='hand2', command=self.try_simconnect)
 		self.simconnect_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
@@ -207,6 +210,8 @@ class HomePage(tk.Frame):
 		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.3.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- You can now generate a flight from your arrival airport.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.3.0', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added METAR and departure caching to speed up flight generation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- METAR will update if new cycle or last cache was longer than 30 minutes ago.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -224,8 +229,7 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- Underneath the map, it shows live flight information such as altitude and IAS.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.1.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added airport and airline validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added a help tab on the home page. This outlines more information about validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft (found on help tab of home page).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -406,6 +410,11 @@ class HomePage(tk.Frame):
 				bg='#f7c5c5',
 				cursor='watch'
 			)
+			self.get_custom_flight_btn.config(
+				text=f'Cooldown: {remaining}s',
+				bg='#f7c5c5',
+				cursor='watch'
+			)
 
 			self.after(1000, lambda: tick(remaining - 1))
 
@@ -420,8 +429,13 @@ class HomePage(tk.Frame):
 			text='Get Flight!',
 			cursor='hand2'
 		)
+		self.get_custom_flight_btn.config(
+			bg='#c8f7c5',
+			text='Get Flight from Arrival',
+			cursor='hand2'
+		)
 
-	def create_flight(self, controller):
+	def create_flight(self, controller, custom=False):
 		'''
 		Create Flight object storing information on a randomly selected flight,
 		based on parameters defined by the selected config file.
@@ -429,8 +443,10 @@ class HomePage(tk.Frame):
 		if self.cooldown_active:
 			return
 
-		self.get_flight_btn.config(text='Getting flight...', bg='#698bf0', cursor='watch')
 		self.cooldown_active = True
+
+		self.get_flight_btn.config(text='Getting flight...', bg='#698bf0', cursor='watch')
+		self.get_custom_flight_btn.config(text='Getting flight...', bg='#698bf0', cursor='watch')
 
 		def task():
 			try:
@@ -439,22 +455,35 @@ class HomePage(tk.Frame):
 				if not config:
 					raise ValueError('There is an error with the selected config file.')
 
-				flight = get_random_flight(controller.config_name)
+				flight = None
+				if not custom:
+					flight = get_random_flight(controller.config_name)
+				else:
+					custom_data = {
+						'departure_iata': self.flight_details.arrival_iata,
+						'airline': self.flight_details.callsign[:3],
+						'aircraft_icao': self.flight_details.aircraft_icao
+					}
+					flight = get_random_flight(controller.config_name, custom_data=custom_data)
 				if flight is None:
 					raise ValueError('No valid flights could be generated. Check your config file or try again later.')
-				self.after(0, lambda: self.finish_ui_update(flight))
+					self.get_flight_btn.config(text='Get Flight!')
+					self.get_custom_flight_btn.config(text='Get Flight from Arrival')
+				self.after(0, lambda: self.finish_ui_update(flight, custom=True))
 			except Exception as e:
 				self.after(0, lambda: messagebox.showerror('Error', str(e)))
 				self.after(0, self.reset_button)
 
 		threading.Thread(target=task, daemon=True).start()
 
-	def finish_ui_update(self, f):
+	def finish_ui_update(self, f, custom=False):
 		'''
 		Update flight info display.
 		'''
 		self.flight_details = f
+
 		self.get_flight_btn.config(text='Get Flight!')
+		self.get_custom_flight_btn.config(text='Get Flight from Arrival')
 
 		# identification
 		self.callsign.set(f'Callsign: {f.callsign}')
