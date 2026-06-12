@@ -13,8 +13,8 @@ from backend import *
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.3.1 | Ben Collingridge'
-WIDTH = 820
+TITLE = 'Flight Generator v2.3.2 | Ben Collingridge'
+WIDTH = 860
 HEIGHT = 890
 
 def centre_window(window, width, height) -> None:
@@ -102,6 +102,7 @@ class HomePage(tk.Frame):
 		super().__init__(parent)
 
 		self.aircraft_update_job = None
+		self.flight_active = False
 
 		self.sim_connected = False
 		self.sm = None
@@ -141,16 +142,20 @@ class HomePage(tk.Frame):
 		flight_details = None
 		flight_control_row = tk.Frame(self)
 		flight_control_row.pack()
-		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', cursor='hand2', command=lambda: self.create_flight(controller) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
+		self.get_flight_btn = tk.Button(flight_control_row, text='Get Flight!', cursor='hand2', command=lambda: self.create_flight_bridge(controller), bg='#c8f7c5')
 		self.get_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
-		self.get_custom_flight_btn = tk.Button(flight_control_row, text='Get Flight from Arrival', cursor='hand2', command=lambda: self.create_flight(controller, custom=True) if controller.config_name != '' else controller.show_frame('HomePage'), bg='#c8f7c5')
+		self.get_custom_flight_btn = tk.Button(flight_control_row, text='Get Flight from Arrival', cursor='hand2', command=lambda: self.create_flight_bridge(controller, from_arrival=True), bg='#c8f7c5')
 		self.get_custom_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		self.simconnect_btn = tk.Button(flight_control_row, text='Start SimConnect', cursor='hand2', command=self.try_simconnect)
 		self.simconnect_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		tk.Button(flight_control_row, text='Stop SimConnect', cursor='hand2', command=self.handle_sim_disconnect).pack(ipadx=20, pady=(12, 0), side='left', padx=10)
+
+		self.stop_active_flight_btn_text = tk.StringVar(value='No Flight Active')
+		self.toggle_active_flight_btn = tk.Button(flight_control_row, text='No Flight Active', cursor='hand2', command=self.stop_active_flight)
+		self.toggle_active_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
@@ -210,6 +215,8 @@ class HomePage(tk.Frame):
 		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.3.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Added active flight toggle after clicking fly now.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.3.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- You can now generate a flight from your arrival airport.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.3.0', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -227,9 +234,6 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- This means when your simulator is open, you will see your aircraft on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- The map will reflect your aircraft position and heading.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Underneath the map, it shows live flight information such as altitude and IAS.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.1.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added airport and airline validation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added a whitelist for the most common aircraft (found on help tab of home page).', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -349,6 +353,25 @@ class HomePage(tk.Frame):
 		except:
 			self.sim_connected = False
 
+	def create_flight_bridge(self, controller, from_arrival=False):
+		if not self.flight_active:
+			if controller.config_name != '':
+				if not from_arrival:
+					self.create_flight(controller)
+				else:
+					self.create_flight(controller, custom=True)
+			else:
+				controller.show_frame('HomePage')
+		else:
+			return messagebox.showinfo('Flight Active', 'Please stop your current flight to generate a new one.')
+
+	def stop_active_flight(self):
+		self.flight_active = False
+		self.toggle_active_flight_btn.config(
+			text=f'No Flight Active',
+			bg='white',
+		)
+
 	def try_simconnect(self):
 		if self.sm is not None:
 			self.sm.exit()
@@ -393,7 +416,11 @@ class HomePage(tk.Frame):
 			return messagebox.showinfo('No Flight', 'Generate a flight first.')
 
 		add_flight_to_log(self.flight_details)
-
+		self.flight_active = True
+		self.toggle_active_flight_btn.config(
+			text=f'Stop Active Flight',
+			bg='#f7c5c5'
+		)
 		messagebox.showinfo('Flight Logged', 'Flight added to logbook.')
 
 	def start_cooldown_ui(self, seconds=5):
