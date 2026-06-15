@@ -245,11 +245,11 @@ def get_random_flight(config_path, custom_data=None) -> str or object:
 	else:
 		accepted_iata = custom_data['departure_iata']
 		accepted_airline = custom_data['airline']
-		accepted_aircraft = custom_data['aircraft_icao']
+		accepted_aircraft = user_config['aircraft']
 		origin_departures = load_departure_cache(accepted_iata)
 		for departure in origin_departures:
 			flight = departure['flight']
-			if flight['identification']['callsign'].startswith(accepted_airline) and flight['aircraft']['model']['code'] == accepted_aircraft:
+			if flight['identification']['callsign'].startswith(accepted_airline) and flight['aircraft']['model']['code'] in accepted_aircraft:
 				block_time = Flight.calc_flight_time(flight['time']['scheduled']['departure_time'], flight['time']['scheduled']['arrival_time']).split(' ')
 				block_time_h = int(block_time[0].replace('h', ''))
 				block_time_m = int(block_time[1].replace('m', ''))

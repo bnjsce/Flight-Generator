@@ -488,8 +488,7 @@ class HomePage(tk.Frame):
 				else:
 					custom_data = {
 						'departure_iata': self.flight_details.arrival_iata,
-						'airline': self.flight_details.callsign[:3],
-						'aircraft_icao': self.flight_details.aircraft_icao
+						'airline': self.flight_details.callsign[:3]
 					}
 					flight = get_random_flight(controller.config_name, custom_data=custom_data)
 				if flight is None:
