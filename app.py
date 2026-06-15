@@ -263,7 +263,8 @@ class HomePage(tk.Frame):
 
 		# airbus
 		tk.Label(self.airbus_tab, text='A318, A319, A19N (A319neo), A320, A20N (A320neo), A321, A21N (A321neo), A332 (A330-200), A333 (A330-300)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.airbus_tab, text='A338 (A330-800neo), A339 (A330-900neo), A343 (A340-300), A346 (A340-600), A388 (A380)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.airbus_tab, text='BCS1 (A220-100), BCS3 (A220-300), A338 (A330-800neo), A339 (A330-900neo), A343 (A340-300), A346 (A340-600)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.airbus_tab, text='A359 (A350-900), A35K (A350-1000), A388 (A380)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))
 
 		# boeing
 		tk.Label(self.boeing_tab, text='B733 (737-300), B734 (737-400), B735 (737-500), B736 (737-600), B737 (737-700), B738 (737-800), B739 (737-900)', font=('Arial', 11)).pack(anchor='w', pady=10, padx=(10, 0))

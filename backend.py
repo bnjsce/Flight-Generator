@@ -199,6 +199,8 @@ def validate_aircraft(icao) -> bool:
 	valid_aircraft = {
 		# Airbus
 		'A318', 'A319', 'A19N', 'A320', 'A20N', 'A321', 'A21N',
+		'BCS1', 'BCS3',
+		'A359', 'A35K',
 		'A332', 'A333', 'A338', 'A339',
 		'A343', 'A346', 'A388',
 
