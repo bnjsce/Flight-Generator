@@ -13,7 +13,7 @@ from backend import *
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.3.2 | Ben Collingridge'
+TITLE = 'Flight Generator v2.3.3 | Ben Collingridge'
 WIDTH = 860
 HEIGHT = 890
 
@@ -215,11 +215,13 @@ class HomePage(tk.Frame):
 		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
 
 		# PATCH NOTES
+		tk.Label(self.patch_notes_tab, text='v2.3.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='- Upgraded from pyflightdata to pyflightdata2.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.3.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added active flight toggle after clicking fly now.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.3.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- You can now generate a flight from your arrival airport.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.3.0', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
+		tk.Label(self.patch_notes_tab, text='v2.3.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added METAR and departure caching to speed up flight generation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- METAR will update if new cycle or last cache was longer than 30 minutes ago.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Departure cache will update if new departure airport or last cache was longer than 3 minutes.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
@@ -227,12 +229,10 @@ class HomePage(tk.Frame):
 		tk.Label(self.patch_notes_tab, text='- Fixed SimConnect map issues.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added refresh and disconnect SimConnect buttons.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- SimConnect no longer tries to automatically launch after generating a flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- For live aircraft traffic, you must now click the start SimConnect button.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added map controls and filters for more customisable interface.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='v2.2.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Added SimConnect support.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- This means when your simulator is open, you will see your aircraft on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- The map will reflect your aircraft position and heading.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 		tk.Label(self.patch_notes_tab, text='- Underneath the map, it shows live flight information such as altitude and IAS.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
