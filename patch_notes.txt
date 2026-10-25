@@ -1,0 +1,29 @@
+v2.3.4
+- Switched map provider to Mella Basemap.
+- Map is now dark theme.
+- Fixed route centre/zoom so that the full route is displayed by default.
+
+v2.3.3
+- Upgraded from pyflightdata to pyflightdata2.
+
+v2.3.2
+- Added active flight toggle after clicking fly now.
+
+v2.3.1
+- You can now generate a flight from your arrival airport.
+
+v2.3.0 (Major Update)
+- Added METAR and departure caching to speed up flight generation.
+- METAR will update if new cycle or last cache was longer than 30 minutes ago.
+- Departure cache will update if new departure airport or last cache was longer than 3 minutes ago.
+
+v2.2.1
+- Fixed SimConnect map issues.
+- Added refresh and disconnect SimConnect buttons.
+- SimConnect no longer tries to automatically launch after generating a flight.
+- Added map controls and filters for more customisable interface.
+
+v2.2.0 (Major Update)
+- Added SimConnect support.
+- This means when your simulator is open, you will see your aircraft on the map.
+- Underneath the map, it shows live flight information such as altitude and IAS.

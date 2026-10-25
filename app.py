@@ -10,10 +10,11 @@ import re
 from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
 from backend import *
+from pathlib import Path
 
 from SimConnect import *
 
-TITLE = 'Flight Generator v2.3.3 | Ben Collingridge'
+TITLE = 'Flight Generator v2.3.4 | Ben Collingridge'
 WIDTH = 860
 HEIGHT = 890
 
@@ -157,6 +158,97 @@ class HomePage(tk.Frame):
 		self.toggle_active_flight_btn = tk.Button(flight_control_row, text='No Flight Active', cursor='hand2', command=self.stop_active_flight)
 		self.toggle_active_flight_btn.pack(ipadx=20, pady=(12, 0), side='left', padx=10)
 
+		def setup_patch_notes():
+			def on_mousewheel(event):
+				self.patch_canvas.yview_scroll(-int(event.delta / 120), 'units')
+
+			self.patch_canvas = tk.Canvas(
+				self.patch_notes_tab,
+				highlightthickness=0
+			)
+
+			scrollbar = ttk.Scrollbar(
+				self.patch_notes_tab,
+				orient='vertical',
+				command=self.patch_canvas.yview
+			)
+
+			self.patch_canvas.configure(
+				yscrollcommand=scrollbar.set
+			)
+
+			scrollbar.pack(side='right', fill='y')
+			self.patch_canvas.pack(
+				side='left',
+				fill='both',
+				expand=True
+			)
+
+			# frame containing the actual patch notes
+			self.patch_notes_frame = ttk.Frame(self.patch_canvas)
+
+			self.patch_canvas_window = self.patch_canvas.create_window(
+				(0, 0),
+				window=self.patch_notes_frame,
+				anchor='nw'
+			)
+
+			# scrollable on Windows
+			if os.name == 'nt':
+				self.patch_canvas.bind(
+					'<MouseWheel>',
+					on_mousewheel
+				)
+
+				self.patch_notes_frame.bind(
+					'<MouseWheel>',
+					on_mousewheel
+				)
+
+			# update scroll region when content changes
+			self.patch_notes_frame.bind(
+				'<Configure>',
+				lambda event: self.patch_canvas.configure(
+					scrollregion=self.patch_canvas.bbox('all')
+				)
+			)
+
+			self.patch_canvas.bind(
+				'<Configure>',
+				lambda event: self.patch_canvas.itemconfigure(
+					self.patch_canvas_window,
+					width=event.width
+				)
+			)
+
+			notes_path = Path(__file__).resolve().with_name('patch_notes.txt')
+
+			with notes_path.open('r', encoding='utf-8') as file:
+				lines = file.readlines()
+
+			for line in lines:
+				line = line.strip()
+
+				if not line:
+					continue
+
+				if line.startswith('v'):
+					# version heading
+					tk.Label(
+						self.patch_notes_frame,
+						text=line,
+						font=('Arial', 14, 'bold')
+					).pack(anchor='w', pady=10, padx=(10, 0))
+				else:
+					# individual patch notes
+					tk.Label(
+						self.patch_notes_frame,
+						text=line,
+						font=('Arial', 11),
+						wraplength=700,
+						justify='left'
+					).pack(anchor='w', pady=5, padx=(10, 0))
+
 		# create tabs for details and map
 		self.notebook = ttk.Notebook(self)
 		self.notebook.pack(fill='both', expand=True, pady=10)
@@ -164,6 +256,7 @@ class HomePage(tk.Frame):
 		self.details_tab = tk.Frame(self.notebook)
 		self.map_tab = tk.Frame(self.notebook)
 		self.patch_notes_tab = tk.Frame(self.notebook)
+		setup_patch_notes()
 		self.help_tab = tk.Frame(self.notebook)
 		
 		self.notebook.add(self.details_tab, text='Details')
@@ -179,6 +272,30 @@ class HomePage(tk.Frame):
 		)
 		self.map_widget.pack(fill='x', padx=15, pady=10, anchor='w')
 		self.map_widget.set_zoom(0)
+		self.map_widget.set_tile_server(
+			"https://basemap.queeniemella.cc/tiles/countries/{z}/{x}/{y}.png",
+			tile_size=256,
+			max_zoom=20
+		)
+
+		self.map_attribution = tk.Label(
+			self.map_widget,
+			text='© queeniemella.cc | © OpenStreetMap contributors',
+			font=('Arial', 8),
+			fg='white',
+			bg='#222222',
+			padx=5,
+			pady=3,
+			cursor='tcross'
+		)
+
+		self.map_attribution.place(
+			relx=1.0,
+			rely=1.0,
+			anchor='se',
+			x=-8,
+			y=-8
+		)
 
 		self.filter_buttons_row = tk.Frame(self.map_tab)
 		self.filter_buttons_row.pack(fill='both', side='right')
@@ -213,27 +330,6 @@ class HomePage(tk.Frame):
 		tk.Label(self.tracking_row, textvariable=self.live_vertical_speed, font=('Arial', 13)).pack(anchor='e', padx=100)
 		tk.Label(self.tracking_row, textvariable=self.live_wind, font=('Arial', 13)).pack(anchor='e', padx=100)
 		tk.Label(self.tracking_row, textvariable=self.live_grounded, font=('Arial', 13)).pack(anchor='e', padx=100)
-
-		# PATCH NOTES
-		tk.Label(self.patch_notes_tab, text='v2.3.3', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Upgraded from pyflightdata to pyflightdata2.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.3.2', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added active flight toggle after clicking fly now.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.3.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- You can now generate a flight from your arrival airport.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.3.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added METAR and departure caching to speed up flight generation.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- METAR will update if new cycle or last cache was longer than 30 minutes ago.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Departure cache will update if new departure airport or last cache was longer than 3 minutes.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.2.1', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Fixed SimConnect map issues.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added refresh and disconnect SimConnect buttons.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- SimConnect no longer tries to automatically launch after generating a flight.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added map controls and filters for more customisable interface.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='v2.2.0 (Major Update)', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Added SimConnect support.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- This means when your simulator is open, you will see your aircraft on the map.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
-		tk.Label(self.patch_notes_tab, text='- Underneath the map, it shows live flight information such as altitude and IAS.', font=('Arial', 11)).pack(anchor='w', pady=5, padx=(10, 0))
 
 		# HELP PAGE
 		tk.Label(self.help_tab, text='Airport Validation', font=('Arial', 14, 'bold')).pack(anchor='w', pady=10, padx=(10, 0))
@@ -679,22 +775,47 @@ class HomePage(tk.Frame):
 		self.map_widget.delete_all_marker()
 		self.map_widget.delete_all_path()
 
-		def calculate_zoom(dep, arr):
-			lat_span = abs(dep[0] - arr[0])
-			lon_span = abs(dep[1] - arr[1])
-			span = max(lat_span, lon_span)
+		def calculate_zoom(dep, arr, width, height, padding=100):
+			lat1, lon1 = dep
+			lat2, lon2 = arr
 
-			if span == 0:
+			# clamp latitudes to the valid practical Mercator range
+			lat1 = max(-85.0511, min(85.0511, lat1))
+			lat2 = max(-85.0511, min(85.0511, lat2))
+
+			phi1 = math.radians(lat1)
+			phi2 = math.radians(lat2)
+
+			# Mercator projection
+			def mercator_y(phi):
+				return math.log(math.tan(math.pi / 4 + phi / 2))
+
+			x1, x2 = lon1 / 360, lon2 / 360
+			y1, y2 = mercator_y(phi1), mercator_y(phi2)
+
+			# shortest longitudinal distance
+			dx = abs(x2 - x1)
+			dx = min(dx, 1 - dx)
+			dy = abs(y2 - y1) / (2 * math.pi)
+
+			available_width = max(1, width - 2 * padding)
+			available_height = max(1, height - 2 * padding)
+
+			if dx == 0 and dy == 0:
 				return 10
 
-			zoom = int(8 - math.log2(span))
-			return max(2, min(10, zoom)) + 1
+			zoom_x = math.log2(available_width / (256 * dx)) if dx > 0 else 20
+			zoom_y = math.log2(available_height / (256 * dy)) if dy > 0 else 20
+
+			zoom = math.floor(min(zoom_x, zoom_y))
+
+			return max(3, min(19, zoom))
 
 		route_centre_coords = self.get_map_centre()
 		centre_coords = route_centre_coords
 		zoom = 0
 		if self.flight_details:
-			zoom = calculate_zoom(f.departure_coords, f.arrival_coords)
+			zoom = calculate_zoom(f.departure_coords, f.arrival_coords, self.map_widget.winfo_width(), self.map_widget.winfo_height())
 		if recentre:
 			zoom = 8
 			centre_coords = self.get_map_centre(aircraft=True)
@@ -714,13 +835,17 @@ class HomePage(tk.Frame):
 				f.departure_coords[0],
 				f.departure_coords[1],
 				text=f'{f.departure_iata}\n{f.departure_timezone} ({f.departure_time_offset})',
-				icon=self.departure_icon
+				text_color='#ad56f5',
+				icon=self.departure_icon,
+				icon_anchor='s'
 			)
 			self.map_widget.set_marker(
 				f.arrival_coords[0],
 				f.arrival_coords[1],
 				text=f'{f.arrival_iata}\n{f.arrival_timezone} ({f.arrival_time_offset})',
-				icon=self.arrival_icon
+				text_color='#ad56f5',
+				icon=self.arrival_icon,
+				icon_anchor='s'
 			)
 
 			heading = f.calc_heading(f.departure_coords, f.arrival_coords)
@@ -730,6 +855,7 @@ class HomePage(tk.Frame):
 				route_centre_coords[0],
 				route_centre_coords[1],
 				text=label,
+				text_color='yellow',
 				icon=self.centre_dot_icon
 			)
 
@@ -737,7 +863,7 @@ class HomePage(tk.Frame):
 			self.map_widget.set_path(
 				[f.departure_coords, f.arrival_coords],
 				width=2,
-				color='dodgerblue'
+				color='dodgerblue',
 			)
 
 class BaseConfigEditor(tk.Frame):
